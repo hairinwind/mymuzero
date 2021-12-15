@@ -10,8 +10,8 @@ from gym import spaces
 from matplotlib import pyplot as plt
 
 # Stable baselines - rl stuff
-from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines import A2C
+# from stable_baselines.common.vec_env import DummyVecEnv
+# from stable_baselines import A2C
 
 class Actions(Enum):
     Sell = 0
