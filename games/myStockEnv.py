@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import gym
 import gym_anytrading
+import os
+import pickle
 
 from enum import Enum
 from gym import spaces
@@ -14,8 +16,6 @@ from stable_baselines import A2C
 class Actions(Enum):
     Sell = 0
     Buy = 1
-    Hold = 2
-
 class Positions(Enum):
     Short = 0
     Long = 1
@@ -38,8 +38,8 @@ class MyCustomEnv(gym.Env):
         self.shape = (window_size * self.signal_features.shape[1],)
         # spaces
         self.action_space = spaces.Discrete(len(Actions))
-        # self.observation_space = spaces.Discrete(60)
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=self.shape, dtype=np.float32)
+        ## self.observation_space = spaces.Discrete(60)
+        # self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=self.shape, dtype=np.float32)
         # episode
         self._start_tick = self.window_size
         self._end_tick = len(self.prices) - 1
@@ -69,14 +69,21 @@ class MyCustomEnv(gym.Env):
         return self._get_observation()
 
     def _get_observation(self):
-        return self.signal_features[(self._current_tick-self.window_size):self._current_tick].flatten()
+        # return self.signal_features[(self._current_tick-self.window_size):self._current_tick].flatten()
+        # observation[days][stocks][signals]
+        # 第一维度代表多少天的数据，比如取两周 day 数据，就是10
+        # 第二维度代表有多少个参考的股票代码， 比如参考5个股票，那就是5
+        # 第三维度代表股票具体指标，比如 open/close/high/low/volume，那就是5个参数
+        data = self.signal_features[(self._current_tick-self.window_size):self._current_tick]
+        observation = np.array([np.array([item]) for item in data])
+        return observation
 
     def _process_data(self):
         # print("..._process_data...")
         start = self.frame_bound[0] - self.window_size
         end = self.frame_bound[1]
         prices = self.df.loc[:, 'Close'].to_numpy()[start:end]
-        signal_features = self.df.loc[:, ['DateNumber', 'Open', 'Close','High', 'Low', 'Volume']].to_numpy()[start:end]
+        signal_features = self.df.loc[:, ['Open', 'Close','High', 'Low', 'Volume']].to_numpy()[start:end]
         return prices, signal_features
         # np.ndarray.flatten(signal_features)
 
@@ -138,10 +145,12 @@ class MyCustomEnv(gym.Env):
         long_ticks = []
         hold_ticks = []
         for i, tick in enumerate(window_ticks):
-            if self._position_history[i] == Positions.Short:
+            if self._position_history[i] == Positions.Short and self._position_history[i-1] == Positions.Long:
                 short_ticks.append(tick)
-            elif self._position_history[i] == Positions.Long:
+            elif self._position_history[i] == Positions.Long and self._position_history[i-1] == Positions.Short: 
                 long_ticks.append(tick)
+            else: 
+                hold_ticks.append(tick)
 
         plt.plot(short_ticks, self.prices[short_ticks], 'ro')
         plt.plot(long_ticks, self.prices[long_ticks], 'go')
@@ -152,10 +161,47 @@ class MyCustomEnv(gym.Env):
         )
         
     def render(self):
-        print("=== render ===")
+        window_ticks = np.arange(len(self._position_history))
+        short_ticks = []
+        long_ticks = []
+        hold_ticks = []
+        for i, tick in enumerate(window_ticks):
+            if i == 0 :
+                previousPosition = Positions.Short
+            else:
+                previousPosition = self._position_history[i-1]
+
+            if self._position_history[i] == Positions.Short and  previousPosition == Positions.Long:
+                short_ticks.append(tick)
+            elif self._position_history[i] == Positions.Long and previousPosition == Positions.Short: 
+                long_ticks.append(tick)
+            else: 
+                hold_ticks.append(tick)
+
+        # print("render prices: ", self.prices)
+        # print("short_ticks:", short_ticks)
+        # print("long_ticks: ", long_ticks)
+
+        result = {}
+        result['prices'] = self.prices
+        result['short_ticks'] = short_ticks
+        result['long_ticks'] = long_ticks
+        result['hold_ticks'] = hold_ticks
+        result['total_reward'] = self._total_reward
+        result['total_profit'] = self._total_profit
         
+        # print("result: ", result)
+        with open('evaluate/result.pkl', 'wb') as file:
+            pickle.dump(result, file)
+
     def close(self):
         plt.close()
+
+    # def legal_actions(self):
+    #     if self._position == Positions.Short: 
+    #         return [Actions.Buy.value, Actions.Hold.value]
+    #     if self._position == Positions.Long:
+    #         return [Actions.Sell.value, Actions.Hold.value]
 
     def step(self, action):
         # print("action: ", Actions(action).name)
@@ -205,45 +251,62 @@ def getData():
     # df.head(15)
     return df
 
-def learn(df):
+# def learn(df):
+#     env = MyCustomEnv(df=df, window_size=12, frame_bound=(12,200))
+#     # print("env shape:", env.shape)
+
+#     # env.reset()
+#     # observation, step_reward, done, info = env.step(1)
+
+#     # print(info)
+#     # print("step_reward:", step_reward)
+
+#     # observation, step_reward, done, info = env.step(0)
+#     # print(info)
+#     # print("step_reward:", step_reward)
+
+#     # observation, step_reward, done, info = env.step(1)
+#     # print(info)
+#     # print("step_reward:", step_reward)
+
+#     env.reset()
+#     env_maker = lambda: env
+#     myenv = DummyVecEnv([env_maker])
+
+#     model = A2C('MlpLstmPolicy', myenv, verbose=1) 
+#     model.learn(total_timesteps=10000)
+#     return model
+
+# def evaluate(model):
+#     ## Evaluation
+#     env = MyCustomEnv(df=df, window_size=12, frame_bound=(201,250))
+#     obs = env.reset()
+#     while True: 
+#         obs = obs[np.newaxis, ...]
+#         action, _states = model.predict(obs)
+#         obs, rewards, done, info = env.step(action)
+#         if done:
+#             print("info", info)
+#             break
+
+#     plt.figure(figsize=(15,6))
+#     plt.cla()
+#     env.render_all()
+#     plt.show()
+
+if __name__ == "__main__":
+    df = getData()
+    print("data size", df.size)
+
     env = MyCustomEnv(df=df, window_size=12, frame_bound=(12,200))
-    # print("env shape:", env.shape)
-
-    # env.reset()
-    # observation, step_reward, done, info = env.step(1)
-
-    # print(info)
-    # print("step_reward:", step_reward)
-
-    # observation, step_reward, done, info = env.step(0)
-    # print(info)
-    # print("step_reward:", step_reward)
-
-    # observation, step_reward, done, info = env.step(1)
-    # print(info)
-    # print("step_reward:", step_reward)
+    prices, signal_features = env._process_data()
+    print("signal_features", signal_features)
 
     env.reset()
-    env_maker = lambda: env
-    myenv = DummyVecEnv([env_maker])
 
-    model = A2C('MlpLstmPolicy', myenv, verbose=1) 
-    model.learn(total_timesteps=10000)
-    return model
+    observation = env._get_observation()
+    print(observation.shape)
+    print(type(observation))
+    print(observation)
 
-def evaluate(model):
-    ## Evaluation
-    env = MyCustomEnv(df=df, window_size=12, frame_bound=(201,250))
-    obs = env.reset()
-    while True: 
-        obs = obs[np.newaxis, ...]
-        action, _states = model.predict(obs)
-        obs, rewards, done, info = env.step(action)
-        if done:
-            print("info", info)
-            break
-
-    plt.figure(figsize=(15,6))
-    plt.cla()
-    env.render_all()
-    plt.show()
+    print("manual test done...")

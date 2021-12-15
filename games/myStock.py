@@ -4,10 +4,12 @@ import os
 import gym
 import numpy
 import torch
-import pandas as pd
 
 from .abstract_game import AbstractGame
-from gym_anytrading.envs import StocksEnv
+from games.myStockEnv import MyCustomEnv, getData
+from rich.console import Console
+
+console = Console()
 
 class MuZeroConfig:
     def __init__(self):
@@ -19,7 +21,7 @@ class MuZeroConfig:
 
 
         ### Game
-        self.observation_shape = (1, 1, 4)  # Dimensions of the game observation, must be 3D (channel, height, width). For a 1D array, please reshape it to (1, 1, length of array)
+        self.observation_shape = (12, 1, 5)  # Dimensions of the game observation, must be 3D (channel, height, width). For a 1D array, please reshape it to (1, 1, length of array)
         self.action_space = list(range(2))  # Fixed list of all possible actions. You should only edit the length
         self.players = list(range(1))  # List of players. You should only edit the length
         self.stacked_observations = 0  # Number of previous observations and previous actions to add to the current observation
@@ -33,8 +35,8 @@ class MuZeroConfig:
         ### Self-Play
         self.num_workers = 1  # Number of simultaneous threads/workers self-playing to feed the replay buffer
         self.selfplay_on_gpu = False
-        self.max_moves = 500  # Maximum number of moves if game is not finished before
-        self.num_simulations = 50  # Number of future moves self-simulated
+        self.max_moves = 200 # 500  # Maximum number of moves if game is not finished before
+        self.num_simulations = 200 # TODO 50  # Number of future moves self-simulated
         self.discount = 0.997  # Chronological discount of the reward
         self.temperature_threshold = None  # Number of moves before dropping the temperature given by visit_softmax_temperature_fn to 0 (ie selecting the best action). If None, visit_softmax_temperature_fn is used every time
 
@@ -49,12 +51,12 @@ class MuZeroConfig:
 
 
         ### Network
-        self.network = "fullyconnected"  # "resnet" / "fullyconnected"
+        self.network = "resnet"  # "resnet" / "fullyconnected"
         self.support_size = 10  # Value and reward are scaled (with almost sqrt) and encoded on a vector with a range of -support_size to support_size. Choose it so that support_size <= sqrt(max(abs(discounted reward)))
         
         # Residual Network
         self.downsample = False  # Downsample observations before representation network, False / "CNN" (lighter) / "resnet" (See paper appendix Network Architecture)
-        self.blocks = 1  # Number of blocks in the ResNet
+        self.blocks = 3  # Number of blocks in the ResNet
         self.channels = 2  # Number of channels in the ResNet
         self.reduced_channels_reward = 2  # Number of channels in reward head
         self.reduced_channels_value = 2  # Number of channels in value head
@@ -76,10 +78,10 @@ class MuZeroConfig:
         ### Training
         self.results_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../results", os.path.basename(__file__)[:-3], datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))  # Path to store the model weights and TensorBoard logs
         self.save_model = True  # Save the checkpoint in results_path as model.checkpoint
-        self.training_steps = 3 #TODO 10000  # Total number of training steps (ie weights update according to a batch)
+        self.training_steps = 10000 #TODO 10000  # Total number of training steps (ie weights update according to a batch)
         self.batch_size = 128  # Number of parts of games to train on at each training step
         self.checkpoint_interval = 10  # Number of training steps before using the model for self-playing
-        self.value_loss_weight = 1  # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25 (See paper appendix Reanalyze)
+        self.value_loss_weight = 0.25  # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25 (See paper appendix Reanalyze)
         self.train_on_gpu = torch.cuda.is_available()  # Train on GPU if available
 
         self.optimizer = "Adam"  # "Adam" or "SGD". Paper uses SGD
@@ -94,9 +96,9 @@ class MuZeroConfig:
 
 
         ### Replay Buffer
-        self.replay_buffer_size = 500  # Number of self-play games to keep in the replay buffer
-        self.num_unroll_steps = 10  # Number of game moves to keep for every batch element
-        self.td_steps = 50  # Number of steps in the future to take into account for calculating the target value
+        self.replay_buffer_size = 10000  # Number of self-play games to keep in the replay buffer
+        self.num_unroll_steps = 200  # Number of game moves to keep for every batch element
+        self.td_steps = 200  # Number of steps in the future to take into account for calculating the target value
         self.PER = True  # Prioritized Replay (See paper appendix Training), select in priority the elements in the replay buffer which are unexpected for the network
         self.PER_alpha = 0.5  # How much prioritization is used, 0 corresponding to the uniform case, paper suggests 1
 
@@ -127,15 +129,6 @@ class MuZeroConfig:
         else:
             return 0.25
 
-# env - anytrade env to learn stock data
-class MyCustomEnv(StocksEnv): 
-    def _process_data(env):
-        start = env.frame_bound[0] - env.window_size
-        end = env.frame_bound[1]
-        prices = env.df.loc[:, 'Close'].to_numpy()[start:end]
-        signal_features = env.df.loc[:, ['Open', 'High', 'Low', 'Volume']].to_numpy()[start:end]
-        return prices, signal_features
-
 
 class Game(AbstractGame):
     """
@@ -143,8 +136,13 @@ class Game(AbstractGame):
     """
 
     def __init__(self, seed=None):
-        df = pd.read_csv('../data/gmedata.csv')
-        self.env = MyCustomEnv(df=df, window_size=50, frame_bound=(50,200))
+        # self.env = gym.make("CartPole-v1")
+        df = getData() 
+        # print(df.head(15))
+        # train
+        self.env = MyCustomEnv(df=df, window_size=12, frame_bound=(12,200))
+        # evaluate
+        # self.env = MyCustomEnv(df=df, window_size=12, frame_bound=(200,250))
         if seed is not None:
             self.env.seed(seed)
 
@@ -159,11 +157,13 @@ class Game(AbstractGame):
             The new observation, the reward and a boolean if the game has ended.
         """
         observation, reward, done, info = self.env.step(action)
-        print("observation shape: ", numpy.shape(observation))
-        print("reward:", reward)
-        print("info:", info)
-        print("")
-        return numpy.array([[observation]]), reward, done
+        # print("====== step ======")
+        # print("action: " + action)
+        # print("observation shape: " + observation.shape)
+        # print("reward: " + reward)
+        # print("info: " + info)
+        # console.log("step", log_locals=True)
+        return observation, reward, done
 
     def legal_actions(self):
         """
@@ -177,6 +177,7 @@ class Game(AbstractGame):
             An array of integers, subset of the action space.
         """
         return list(range(2))
+        # return self.env.legal_actions()
 
     def reset(self):
         """
@@ -185,7 +186,8 @@ class Game(AbstractGame):
         Returns:
             Initial observation of the game.
         """
-        return numpy.array([[self.env.reset()]])
+        # print("====== reset ======")
+        return self.env.reset()
 
     def close(self):
         """
@@ -198,7 +200,6 @@ class Game(AbstractGame):
         Display the game observation.
         """
         self.env.render()
-        input("Press enter to take a step ")
 
     def action_to_string(self, action_number):
         """
@@ -210,8 +211,10 @@ class Game(AbstractGame):
         Returns:
             String representing the action.
         """
+        print('...aciton_to_string() is called...')
         actions = {
-            0: "Push cart to the left",
-            1: "Push cart to the right",
+            0: "Sell",
+            1: "Buy",
+            2: "Hold"
         }
         return f"{action_number}. {actions[action_number]}"
