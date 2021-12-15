@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import gym
-import gym_anytrading
+# import gym_anytrading
 import os
 import pickle
 
