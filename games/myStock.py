@@ -7,9 +7,9 @@ import torch
 
 from .abstract_game import AbstractGame
 from games.myStockEnv import MyCustomEnv, getData
-from rich.console import Console
+# from rich.console import Console
 
-console = Console()
+# console = Console()
 
 class MuZeroConfig:
     def __init__(self):
