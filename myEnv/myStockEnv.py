@@ -207,6 +207,7 @@ class MyCustomEnv(gym.Env):
 
         result = {}
         result['prices'] = self.prices
+        result['total_value_history'] = self.my_total_value_history
         result['short_ticks'] = short_ticks
         result['long_ticks'] = long_ticks
         result['hold_ticks'] = hold_ticks
