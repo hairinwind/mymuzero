@@ -56,6 +56,11 @@ class MyCustomEnv(gym.Env):
         self.trade_fee_bid_percent = 0.01  # unit
         self.trade_fee_ask_percent = 0.005  # unit
 
+        self.my_init_cash_balance = 1
+        self.my_cash_balance = self.my_init_cash_balance
+        self.my_shares = 0
+        self.my_total_value_history = []
+
     def reset(self):
         self._done = False
         self._current_tick = self._start_tick
@@ -66,6 +71,9 @@ class MyCustomEnv(gym.Env):
         self._total_profit = 1.  # unit
         self._first_rendering = True
         self.history = {}
+        self.my_cash_balance = self.my_init_cash_balance
+        self.my_shares = 0
+        self.my_total_value_history = []
         return self._get_observation()
 
     def _get_observation(self):
@@ -90,28 +98,42 @@ class MyCustomEnv(gym.Env):
     def _calculate_reward(self, action):
         step_reward = 0
 
-        trade = False
-        if ((action == Actions.Buy.value and self._position == Positions.Short) or
-            (action == Actions.Sell.value and self._position == Positions.Long)):
-            trade = True
+        # trade = False
+        # if ((action == Actions.Buy.value and self._position == Positions.Short) or
+        #     (action == Actions.Sell.value and self._position == Positions.Long)):
+        #     trade = True
 
-        # print("trade:", trade)
+        # # print("trade:", trade)
 
-        if trade:
-            current_price = self.prices[self._current_tick]
-            last_trade_price = self.prices[self._last_trade_tick]
-            price_diff = current_price - last_trade_price
+        # if trade:
+        #     current_price = self.prices[self._current_tick]
+        #     last_trade_price = self.prices[self._last_trade_tick]
+        #     price_diff = current_price - last_trade_price
 
-            if self._position == Positions.Long:
-                step_reward += price_diff
+        #     if self._position == Positions.Long:
+        #         step_reward += price_diff
 
-            # print("current_price: ", current_price)
-            # print("last_trade_price: ", last_trade_price)
-            # print("price_diff: ", price_diff)
-            # print("step_reward", step_reward)
+        #     # reward 是买卖时候每股股票的价格差
+        #     # print("current_price: ", current_price)
+        #     # print("last_trade_price: ", last_trade_price)
+        #     # print("price_diff: ", price_diff)
+        #     # print("step_reward", step_reward)
 
-        return step_reward
-    
+        # return self.my_cash_balance, self.my_shares, self.my_total_value
+        current_price = self.prices[self._current_tick]
+        if action == Actions.Sell.value and self._position == Positions.Long:
+            my_cash_balance = self.my_shares * current_price
+            my_shares = 0
+        elif action == Actions.Buy.value and self._position == Positions.Short:
+            my_shares = self.my_cash_balance / current_price
+            my_cash_balance = 0
+        else: 
+            my_cash_balance = self.my_cash_balance
+            my_shares = self.my_shares
+        my_total_value = my_shares * current_price + my_cash_balance
+        return my_cash_balance, my_shares, my_total_value
+            
+
     def _update_profit(self, action):
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
@@ -211,17 +233,19 @@ class MyCustomEnv(gym.Env):
         if self._current_tick == self._end_tick:
             self._done = True
 
-        step_reward = self._calculate_reward(action)
-        self._total_reward += step_reward
+        # step_reward = self._calculate_reward(action)
+        # self._total_reward += step_reward
+        # self._update_profit(action)
+        self.my_cash_balance, self.my_shares, my_total_value = self._calculate_reward(action)
+        self.my_total_value_history.append(my_total_value)
+        self._total_reward = my_total_value - self.my_init_cash_balance
+        print("action:{} cash_balance:{}, shares:{}, totalValue:{}, reward:{}".format(action, self.my_cash_balance, self.my_shares, my_total_value, self._total_reward))
 
-        self._update_profit(action)
 
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
             (action == Actions.Sell.value and self._position == Positions.Long)):
             trade = True
-
-        # print("trade? ", trade)
 
         if trade:
             self._position = self._position.opposite()
@@ -238,7 +262,8 @@ class MyCustomEnv(gym.Env):
         )
         self._update_history(info)
 
-        return observation, step_reward, self._done, info
+        # return observation, step_reward, self._done, info
+        return observation, self._total_reward, self._done, info
 
 
 def getData(): 

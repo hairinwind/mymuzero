@@ -212,10 +212,8 @@ class Game(AbstractGame):
         Returns:
             String representing the action.
         """
-        print('...aciton_to_string() is called...')
         actions = {
             0: "Sell",
-            1: "Buy",
-            2: "Hold"
+            1: "Buy"
         }
         return f"{action_number}. {actions[action_number]}"
