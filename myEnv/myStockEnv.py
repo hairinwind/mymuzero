@@ -62,6 +62,7 @@ class MyCustomEnv(gym.Env):
         self.my_total_value_history = []
 
     def reset(self):
+        # print("=== reset === ")
         self._done = False
         self._current_tick = self._start_tick
         self._last_trade_tick = self._current_tick - 1
@@ -237,9 +238,11 @@ class MyCustomEnv(gym.Env):
         # self._total_reward += step_reward
         # self._update_profit(action)
         self.my_cash_balance, self.my_shares, my_total_value = self._calculate_reward(action)
+        previous_total_value = self.previousTotalValue()
         self.my_total_value_history.append(my_total_value)
+        step_reward = my_total_value / previous_total_value
         self._total_reward = my_total_value - self.my_init_cash_balance
-        print("action:{} cash_balance:{}, shares:{}, totalValue:{}, reward:{}".format(action, self.my_cash_balance, self.my_shares, my_total_value, self._total_reward))
+        # print("action:{} cash_balance:{}, shares:{}, totalValue:{}, step_reward:{}".format(action, self.my_cash_balance, self.my_shares, my_total_value, step_reward), end='\r')
 
 
         trade = False
@@ -263,7 +266,18 @@ class MyCustomEnv(gym.Env):
         self._update_history(info)
 
         # return observation, step_reward, self._done, info
-        return observation, self._total_reward, self._done, info
+
+        if my_total_value > 6:
+            self._done = True
+            print("... my_total_value > 5 ... set sefl._done to True")
+        return observation, step_reward, self._done, info
+
+    def previousTotalValue(self):
+        try:
+            previous_total_value = self.my_total_value_history[-1]
+        except IndexError:
+            previous_total_value = self.my_init_cash_balance
+        return previous_total_value
 
 
 def getData(): 
