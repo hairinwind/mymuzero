@@ -125,6 +125,8 @@ class MuZero:
         self.shared_storage_worker = None
 
     def train(self, log_in_tensorboard=True):
+        tic = time.perf_counter() # by YAO
+
         """
         Spawn ray workers and launch the training.
 
@@ -196,6 +198,9 @@ class MuZero:
             self.logging_loop(
                 num_gpus_per_worker if self.config.selfplay_on_gpu else 0,
             )
+
+        toc = time.perf_counter() # by YAO
+        print(f"Completed training in {toc - tic:0.4f} seconds") # by YAO
 
     def logging_loop(self, num_gpus):
         """
