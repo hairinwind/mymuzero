@@ -3,6 +3,7 @@ import random
 import torch
 import math
 import time
+from tqdm import tqdm
 
 class DynamicNet(torch.nn.Module):
     def __init__(self):
@@ -52,7 +53,7 @@ model = DynamicNet()
 # vanilla stochastic gradient descent is tough, so we use momentum
 criterion = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-8, momentum=0.9)
-for t in range(30000):
+for t in tqdm(range(3000000)):
     # Forward pass: Compute predicted y by passing x to the model
     y_pred = model(x)
 
