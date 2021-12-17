@@ -92,7 +92,7 @@ class MyCustomEnv(gym.Env):
         start = self.frame_bound[0] - self.window_size
         end = self.frame_bound[1]
         prices = self.df.loc[:, 'Close'].to_numpy()[start:end]
-        signal_features = self.df.loc[:, ['Open', 'Close','High', 'Low', 'Volume']].to_numpy()[start:end]
+        signal_features = self.df.loc[:, ['Open', 'Close', 'High', 'Low', 'Volume', 'SMA12', 'SMA20', 'RSI', 'OBV']].to_numpy()[start:end]
         return prices, signal_features
         # np.ndarray.flatten(signal_features)
 
