@@ -268,9 +268,9 @@ class MyCustomEnv(gym.Env):
 
         # return observation, step_reward, self._done, info
 
-        if my_total_value > 6:
-            self._done = True
-            print("... my_total_value > 5 ... set sefl._done to True")
+        # if my_total_value > 6:
+        #     self._done = True
+        #     print("... my_total_value > 5 ... set sefl._done to True")
         return observation, step_reward, self._done, info
 
     def previousTotalValue(self):
@@ -282,13 +282,14 @@ class MyCustomEnv(gym.Env):
 
 
 def getData(): 
-    df = pd.read_csv('data/gmedata.csv')
+    target_data_file = 'data/data.csv'
+    df = pd.read_csv(target_data_file)
     df['Date'] = pd.to_datetime(df['Date'])
     df['DateNumber'] = df['Date'].apply(lambda x: int(x.strftime('%Y%m%d')))
     df.sort_values('Date', ascending=True, inplace=True)
     df.set_index('Date', inplace=True)
     # df.dtypes
-    # df.head(15)
+    print(df.head(15))
     return df
 
 # def learn(df):

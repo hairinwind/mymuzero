@@ -20,6 +20,8 @@ import self_play
 import shared_storage
 import trainer
 
+# by YAO
+from shutil import copyfile
 
 class MuZero:
     """
@@ -600,6 +602,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         # Train directly with "python muzero.py cartpole"
         muzero = MuZero(sys.argv[1])
+        copyfile('data/training/gmedata.csv', 'data/data.csv') # by YAO
         muzero.train()
     else:
         print("\nWelcome to MuZero! Here's a list of games:")
@@ -645,6 +648,8 @@ if __name__ == "__main__":
                 choice = input("Invalid input, enter a number listed above: ")
             choice = int(choice)
             if choice == 0:
+                # copy training data file
+                copyfile('data/training/gmedata.csv', 'data/data.csv') # by YAO
                 muzero.train()
             elif choice == 1:
                 load_model_menu(muzero, game_name)
@@ -653,6 +658,8 @@ if __name__ == "__main__":
             elif choice == 3:
                 muzero.test(render=True, opponent="self", muzero_player=None)
             elif choice == 4:
+                # copy evaluation data file
+                copyfile('data/evaluate/gme_evaluate_data.csv', 'data/data.csv') # by YAO
                 muzero.test(render=True, opponent="human", muzero_player=0)
             elif choice == 5:
                 env = muzero.Game()

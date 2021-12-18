@@ -10,8 +10,11 @@ def customIndicators(df):
     df['OBV'] = TA.OBV(df)
     df.fillna(0, inplace=True)
 
-df = pd.read_csv('data/gmedata.csv')
-customIndicators(df)
-print(df.head(30))
-df.to_csv('data/gmedata.csv')
+def readAndSave(fileName):
+    df = pd.read_csv(fileName)
+    customIndicators(df)
+    print(df.head(30))
+    df.to_csv(fileName)
 
+# readAndSave('data/gmedata.csv')
+readAndSave('data/evaluate/gme_evaluate_data.csv')
