@@ -28,16 +28,16 @@ class MuZeroConfig:
 
         # Evaluate
         self.muzero_player = 0  # Turn Muzero begins to play (0: MuZero plays first, 1: MuZero plays second)
-        self.opponent = "self"  # Hard coded agent that MuZero faces to assess his progress in multiplayer games. It doesn't influence training. None, "random" or "expert" if implemented in the Game class
+        self.opponent = "expert"  # Hard coded agent that MuZero faces to assess his progress in multiplayer games. It doesn't influence training. None, "random" or "expert" if implemented in the Game class
 
 
 
         ### Self-Play
         self.num_workers = 1  # Number of simultaneous threads/workers self-playing to feed the replay buffer
         self.selfplay_on_gpu = False
-        self.max_moves = 188  # Maximum number of moves if game is not finished before
+        self.max_moves = 9  # Maximum number of moves if game is not finished before
         self.num_simulations = 25  # Number of future moves self-simulated
-        self.discount = 0.1  # Chronological discount of the reward
+        self.discount = 1  # Chronological discount of the reward
         self.temperature_threshold = None  # Number of moves before dropping the temperature given by visit_softmax_temperature_fn to 0 (ie selecting the best action). If None, visit_softmax_temperature_fn is used every time
 
         # Root prior exploration noise
@@ -56,7 +56,7 @@ class MuZeroConfig:
 
         # Residual Network
         self.downsample = False  # Downsample observations before representation network, False / "CNN" (lighter) / "resnet" (See paper appendix Network Architecture)
-        self.blocks = 2  # Number of blocks in the ResNet
+        self.blocks = 1  # Number of blocks in the ResNet
         self.channels = 16  # Number of channels in the ResNet
         self.reduced_channels_reward = 16  # Number of channels in reward head
         self.reduced_channels_value = 16  # Number of channels in value head
@@ -78,7 +78,7 @@ class MuZeroConfig:
         ### Training
         self.results_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../results", os.path.basename(__file__)[:-3], datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))  # Path to store the model weights and TensorBoard logs
         self.save_model = True  # Save the checkpoint in results_path as model.checkpoint
-        self.training_steps = 50000  # Total number of training steps (ie weights update according to a batch)
+        self.training_steps = 10000  # Total number of training steps (ie weights update according to a batch)
         self.batch_size = 64  # Number of parts of games to train on at each training step
         self.checkpoint_interval = 10  # Number of training steps before using the model for self-playing
         self.value_loss_weight = 0.25  # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25 (See paper appendix Reanalyze)
