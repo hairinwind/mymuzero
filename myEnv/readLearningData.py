@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 defaultDatePattern = '%Y%m%d'
-quotesOnedayPath = "/home/yao/myworkspace/myPython/mymuzero/data/quotes_oneday_data"
+quotesOnedayPath = "data/quotes_oneday_data"
 
 ## input argument day: 20210831
 ## returns 20210901
