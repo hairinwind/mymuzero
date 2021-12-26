@@ -21,7 +21,7 @@ import shared_storage
 import trainer
 
 # by YAO
-from shutil import copyfile
+import shutil
 
 class MuZero:
     """
@@ -597,12 +597,25 @@ def load_model_menu(muzero, game_name):
         checkpoint_path=checkpoint_path, replay_buffer_path=replay_buffer_path,
     )
 
+# by YAO
+def copyTrainingFiles():
+    src = "data/training/*"
+    copyFiles(src, "data/working")
 
+def copyEvaluationFiles():
+    src = "data/evaluate/*"
+    copyFiles(src, "data/working")
+
+def copyFiles(src, targetDir):
+    for file in glob(src):
+        print(f'copy {file} to {targetDir}')
+        shutil.copy(file, targetDir)
+        
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         # Train directly with "python muzero.py cartpole"
         muzero = MuZero(sys.argv[1])
-        copyfile('data/training/gmedata.csv', 'data/data.csv') # by YAO
+        copyTrainingFiles() # by YAO
         muzero.train()
     else:
         print("\nWelcome to MuZero! Here's a list of games:")
@@ -648,8 +661,7 @@ if __name__ == "__main__":
                 choice = input("Invalid input, enter a number listed above: ")
             choice = int(choice)
             if choice == 0:
-                # copy training data file
-                copyfile('data/training/gmedata.csv', 'data/data.csv') # by YAO
+                copyTrainingFiles() # by YAO, copy training data file
                 muzero.train()
             elif choice == 1:
                 load_model_menu(muzero, game_name)
@@ -658,8 +670,7 @@ if __name__ == "__main__":
             elif choice == 3:
                 muzero.test(render=True, opponent="self", muzero_player=None)
             elif choice == 4:
-                # copy evaluation data file
-                copyfile('data/evaluate/gme_evaluate_data.csv', 'data/data.csv') # by YAO
+                copyEvaluationFiles() # by YAO, copy evaluation data file
                 muzero.test(render=True, opponent="human", muzero_player=0)
             elif choice == 5:
                 env = muzero.Game()
