@@ -50,7 +50,7 @@ class TECLCustomEnv(gym.Env):
         # episode
         # self._start_tick = self.window_size
         # self._end_tick = len(self.prices) - 1
-        self.prices = np.zeros(len(self.df)/123) # TODO 123 hardcoded 
+        self.prices = np.zeros(int(len(self.df)/123)) # TODO 123 hardcoded 
         self._done = None
         self._current_tick = None
         self._last_trade_tick = None
