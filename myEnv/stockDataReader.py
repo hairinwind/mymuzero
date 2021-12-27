@@ -45,8 +45,8 @@ def getArray(df, tick):
         endIndex = (i+1) * symbolCount 
         if startIndex >= len(subDataFrame):
             return None
-        data.append(subDataFrame[startIndex : endIndex].to_numpy())
-    return np.array(data)
+        data.append(subDataFrame[startIndex : endIndex].to_numpy().tolist())
+    return data
 
 def getSubDataFrame(df, tick):
     oneSetCount = countPerDay * symbolCount
@@ -66,7 +66,6 @@ if __name__ == '__main__':
 
     # read first 85 record 
     data = getArray(df, 0)
-    print('data shape: ', data.shape)
     print(data[0][0][0], data[0][0][1])
     print(data[0][122][0], data[0][122][1])
     print(data[84][0][0], data[84][0][1])
@@ -78,4 +77,7 @@ if __name__ == '__main__':
     print(data[84][0][0], data[84][0][1])
     print(data[84][122][0], data[84][122][1])
 
-    print(getArray(df, 100))
+    print(type(data))
+    print('data shape: ', np.array(data).shape)
+
+    assert getArray(df, 100) is None
