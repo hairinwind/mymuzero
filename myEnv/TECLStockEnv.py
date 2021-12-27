@@ -50,7 +50,7 @@ class TECLCustomEnv(gym.Env):
         # episode
         # self._start_tick = self.window_size
         # self._end_tick = len(self.prices) - 1
-        self.prices = []
+        self.prices = np.zeros(len(self.df)/123) # TODO 123 hardcoded 
         self._done = None
         self._current_tick = None
         self._last_trade_tick = None
@@ -246,8 +246,9 @@ class TECLCustomEnv(gym.Env):
             currentPrice = observation[84][99][0]
             debug(f'TECL currentPrice: {currentPrice}')
                 # update price history
-            if len(self.prices) < self._current_tick:
-                self.prices.append(currentPrice)
+            # if len(self.prices) < self._current_tick:
+            #     self.prices.append(currentPrice)
+            self.prices[self._current_tick-1] = currentPrice
         self.my_cash_balance, self.my_shares, my_total_value = self._calculate_reward(action)
         previous_total_value = self.previousTotalValue()
         self.my_total_value_history.append(my_total_value)
