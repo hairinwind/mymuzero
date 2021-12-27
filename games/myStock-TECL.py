@@ -35,7 +35,7 @@ class MuZeroConfig:
         ### Self-Play
         self.num_workers = 1  # Number of simultaneous threads/workers self-playing to feed the replay buffer
         self.selfplay_on_gpu = False
-        self.max_moves = 1000  # Maximum number of moves if game is not finished before
+        self.max_moves = 2000  # Maximum number of moves if game is not finished before
         self.num_simulations = 300  # Number of future moves self-simulated
         self.discount = 1  # Chronological discount of the reward
         self.temperature_threshold = None  # Number of moves before dropping the temperature given by visit_softmax_temperature_fn to 0 (ie selecting the best action). If None, visit_softmax_temperature_fn is used every time
@@ -131,7 +131,7 @@ class Game(AbstractGame):
 
     def __init__(self, seed=None):
         # self.env = gym.make("CartPole-v1")
-        self.env = TECLCustomEnv(config='teclConfig.json', window_size=0) #, frame_bound=(10,200)
+        self.env = TECLCustomEnv(configFile='teclConfig.json') #, frame_bound=(10,200)
         if seed is not None:
             self.env.seed(seed)
 
