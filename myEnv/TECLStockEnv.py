@@ -1,14 +1,12 @@
 import gym
 import json
-import numpy as np
 import os
-import pandas as pd
 import pickle
 
 from enum import Enum
 from gym import spaces
 from matplotlib import pyplot as plt
-from myEnv.stockDataReader import readToDataFrame, getArray
+from myEnv.stockDataReader import readToDataFrame, getArray, countPerDay, targetSymbolIndex
 from util import debug
 
 def readConfig(config): 
@@ -50,7 +48,7 @@ class TECLCustomEnv(gym.Env):
         # episode
         # self._start_tick = self.window_size
         # self._end_tick = len(self.prices) - 1
-        self.prices = np.zeros(int(len(self.df)/123)) # TODO 123 hardcoded 
+        self.prices = [0] * int(len(self.df)/123) # TODO 123 hardcoded 
         self._done = None
         self._current_tick = None
         self._last_trade_tick = None
@@ -74,7 +72,7 @@ class TECLCustomEnv(gym.Env):
 
         self._done = False
         self._current_tick = 0
-        self._last_trade_tick = self._current_tick - 1
+        self._last_trade_tick = self._current_tick - 1 #TODO is it correct???
         self._position = Positions.Short
         # self._position_history = (self.window_size * [None]) + [self._position]
         self._position_history = []
@@ -160,7 +158,7 @@ class TECLCustomEnv(gym.Env):
         # print("_update_history::history: ", self.history)
 
     def render_all(self, mode='human'):
-        window_ticks = np.arange(len(self._position_history))
+        window_ticks = [0] * len(self._position_history)
         plt.plot(self.prices)
 
         short_ticks = []
@@ -183,7 +181,7 @@ class TECLCustomEnv(gym.Env):
         )
         
     def render(self):
-        window_ticks = np.arange(len(self._position_history))
+        window_ticks = [0] * len(self._position_history)
         short_ticks = []
         long_ticks = []
         hold_ticks = []
@@ -243,7 +241,7 @@ class TECLCustomEnv(gym.Env):
         if observation is None:
             self._done = True
         else:
-            currentPrice = observation[84][99][0]
+            currentPrice = observation[countPerDay-1][targetSymbolIndex][0]
             debug(f'TECL currentPrice: {currentPrice}')
                 # update price history
             # if len(self.prices) < self._current_tick:
