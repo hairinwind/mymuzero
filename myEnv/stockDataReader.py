@@ -29,7 +29,7 @@ def minuteFilter(row):
 """
 - dropColumns shall be True, False is for testing purpose
 """
-def readToDataFrame(startDate, endDate, dropColumns=True):
+def readToDataFrame(startDate, endDate):
     periodRange = pd.period_range(start=startDate, end=endDate, freq='D')
     result = []
     for day in periodRange:
@@ -38,16 +38,17 @@ def readToDataFrame(startDate, endDate, dropColumns=True):
             print(f'read file for {day}')
             df = pd.read_csv(file)
             df = df[df.apply(minuteFilter, axis=1)]
-            # convert symbol to int or drop symbol?
-            # convert date to int
-            if dropColumns:
-                df = df.drop(columns=['symbol', 'currentTime'])
             result.append(df)
     return pd.concat(result)
 
 # tick starts from 0 
 def getArray(df, tick):
     subDataFrame = getSubDataFrame(df, tick)
+
+    # convert symbol to int or drop symbol?
+    # convert date to int
+    subDataFrame = subDataFrame.drop(columns=['symbol', 'currentTime'])
+    
     # convert to np array
     data = []
     for i in range(countPerDay):
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     startDate, endDate = '20210831', '20210901'
     memoryBefore = getMemoryUsed()
     
-    df = readToDataFrame(startDate, endDate, dropColumns=False)
+    df = readToDataFrame(startDate, endDate)
     print(len(df))
     
     memoryAfter = getMemoryUsed()
@@ -85,11 +86,11 @@ if __name__ == '__main__':
 
     data = getArray(df, 0)
     printSample(data)
-    assert data[0][99][0] == 'TECL'
+    # assert data[0][99][0] == 'TECL'
     
     data = getArray(df, 1)
     printSample(data)
-    assert data[0][99][0] == 'TECL'
+    # assert data[0][99][0] == 'TECL'
 
     print(type(data))
     print(type(data[0]))
