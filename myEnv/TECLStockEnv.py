@@ -1,5 +1,6 @@
 import gym
 import json
+import numpy as np
 import os
 import pickle
 
@@ -181,35 +182,39 @@ class TECLCustomEnv(gym.Env):
         )
         
     def render(self):
-        window_ticks = [0] * len(self._position_history)
-        short_ticks = []
-        long_ticks = []
-        hold_ticks = []
-        for i, tick in enumerate(window_ticks):
-            if i == 0 :
-                previousPosition = Positions.Short
-            else:
-                previousPosition = self._position_history[i-1]
+        if self._done:
+            window_ticks = np.arange(len(self._position_history))
+            short_ticks = []
+            long_ticks = []
+            
+            print("self._position_history:", self._position_history)
+            # print("window_ticks:", window_ticks)
+            # print(self._position_history)
+            for i, tick in enumerate(window_ticks):
+                if i == 0 :
+                    previousPosition = Positions.Short
+                else:
+                    previousPosition = self._position_history[i-1]
 
-            if self._position_history[i] == Positions.Short and  previousPosition == Positions.Long:
-                short_ticks.append(tick)
-            elif self._position_history[i] == Positions.Long and previousPosition == Positions.Short: 
-                long_ticks.append(tick)
-            else: 
-                hold_ticks.append(tick)
-
-        result = {}
-        result['prices'] = self.prices
-        result['total_value_history'] = self.my_total_value_history
-        result['short_ticks'] = short_ticks
-        result['long_ticks'] = long_ticks
-        result['hold_ticks'] = hold_ticks
-        result['total_reward'] = self._total_reward
-        result['total_profit'] = self._total_profit
+                if self._position_history[i] == Positions.Short and  previousPosition == Positions.Long:
+                    short_ticks.append(tick)
+                    print("add short_ticks:", tick)
+                if self._position_history[i] == Positions.Long and previousPosition == Positions.Short: 
+                    long_ticks.append(tick)
+                    print("add long_ticks:", tick)
+                
+            result = {}
+            result['prices'] = self.prices
+            result['total_value_history'] = self.my_total_value_history
+            result['short_ticks'] = short_ticks
+            result['long_ticks'] = long_ticks
+            result['total_reward'] = self._total_reward
+            result['total_profit'] = self._total_profit
         
-        print("result: ", result)
-        with open('evaluate/result.pkl', 'wb') as file:
-            pickle.dump(result, file)
+            # print("result: ", result)
+        
+            with open('evaluate/result.pkl', 'wb') as file:
+                pickle.dump(result, file)
 
     def close(self):
         plt.close()
@@ -242,7 +247,8 @@ class TECLCustomEnv(gym.Env):
             self._done = True
         else:
             currentPrice = observation[countPerDay-1][targetSymbolIndex][0]
-            debug(f'TECL currentPrice: {currentPrice}')
+            if trade:
+                debug(f'{Actions(action).name} TECL @{currentPrice}')
                 # update price history
             # if len(self.prices) < self._current_tick:
             #     self.prices.append(currentPrice)
