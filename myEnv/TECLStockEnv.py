@@ -100,28 +100,31 @@ class TECLCustomEnv(gym.Env):
     def _calculate_reward(self, action):
         step_reward = 0
 
-        # trade = False
-        # if ((action == Actions.Buy.value and self._position == Positions.Short) or
-        #     (action == Actions.Sell.value and self._position == Positions.Long)):
-        #     trade = True
+        trade = False
+        if ((action == Actions.Buy.value and self._position == Positions.Short) or
+            (action == Actions.Sell.value and self._position == Positions.Long)):
+            trade = True
 
-        # # print("trade:", trade)
+        # print("trade:", trade)
 
-        # if trade:
-        #     current_price = self.prices[self._current_tick]
-        #     last_trade_price = self.prices[self._last_trade_tick]
-        #     price_diff = current_price - last_trade_price
+        if trade:
+            current_price = self.prices[self._current_tick]
+            last_trade_price = self.prices[self._last_trade_tick]
+            price_diff = current_price - last_trade_price
 
-        #     if self._position == Positions.Long:
-        #         step_reward += price_diff
+            if self._position == Positions.Long:
+                step_reward += price_diff
 
-        #     # reward 是买卖时候每股股票的价格差
-        #     # print("current_price: ", current_price)
-        #     # print("last_trade_price: ", last_trade_price)
-        #     # print("price_diff: ", price_diff)
-        #     # print("step_reward", step_reward)
+            # reward 是买卖时候每股股票的价格差
+            # print("current_price: ", current_price)
+            # print("last_trade_price: ", last_trade_price)
+            # print("price_diff: ", price_diff)
+            # print("step_reward", step_reward)
+        
+        return step_reward
 
-        # return self.my_cash_balance, self.my_shares, self.my_total_value
+
+    def _calculate_total_value(self, action):
         current_price = self.prices[self._current_tick - 1]
         if action == Actions.Sell.value and self._position == Positions.Long:
             my_cash_balance = self.my_shares * current_price * (1 - self.trade_fee_bid_percent)
@@ -238,24 +241,27 @@ class TECLCustomEnv(gym.Env):
             (action == Actions.Sell.value and self._position == Positions.Long)):
             trade = True
 
+        observation = self._get_observation()
+        if observation is None:
+            self._done = True
+
+        step_reward = self._calculate_reward(action)
+        self._total_reward += step_reward
+
         if trade:
             self._position = self._position.opposite()
             self._last_trade_tick = self._current_tick
             # print("_position:", self._position)
             # print("self._last_trade_tick: ", self._last_trade_tick)
 
-        self._position_history.append(self._position)
-        observation = self._get_observation()
-
-        if observation is None:
-            self._done = True
-
-        self.my_cash_balance, self.my_shares, my_total_value = self._calculate_reward(action)
-        previous_total_value = self.previousTotalValue()
+        
+        my_cash_balance, my_shares, my_total_value = self._calculate_total_value(action)
+        # previous_total_value = self.previousTotalValue()
         self.my_total_value_history.append(my_total_value)
-        step_reward = my_total_value / previous_total_value
-        self._total_reward = my_total_value - self.my_init_cash_balance
+        # step_reward = my_total_value / previous_total_value
+        # self._total_reward = my_total_value - self.my_init_cash_balance
 
+        self._position_history.append(self._position)
         info = dict(
             total_reward = self._total_reward,
             total_profit = self._total_profit,
