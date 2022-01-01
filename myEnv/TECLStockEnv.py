@@ -218,7 +218,7 @@ class TECLCustomEnv(gym.Env):
             result['total_profit'] = self._total_profit
         
             # print("result: ", result)
-        
+            print("done, picle the file...")
             with open('evaluate/result.pkl', 'wb') as file:
                 pickle.dump(result, file)
 
@@ -243,6 +243,7 @@ class TECLCustomEnv(gym.Env):
 
         observation = self._get_observation()
         if observation is None:
+            print('observation is None, set self._done to True...')
             self._done = True
 
         step_reward = self._calculate_reward(action)
