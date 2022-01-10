@@ -35,7 +35,7 @@ def readToDataFrame(startDate, endDate):
     for day in periodRange:
         file = getFile(day)
         if os.path.isfile(file):
-            print(f'read file for {day}')
+            # print(f'read file for {day}')
             df = pd.read_csv(file)
             df = df[df.apply(minuteFilter, axis=1)]
             result.append(df)

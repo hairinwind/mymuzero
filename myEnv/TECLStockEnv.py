@@ -7,14 +7,15 @@ import pickle
 from enum import Enum
 from gym import spaces
 from matplotlib import pyplot as plt
-from myEnv.stockDataReader import readToDataFrame, getArray, countPerDay, targetSymbolIndex
+# from myEnv.stockDataReader import readToDataFrame, getArray, countPerDay, targetSymbolIndex
+from myEnv.stockDataAlphaReader import readToDataFrame, getArray
 from util import debug
 
 def readConfig(config): 
-    print(f'config is {config}')
+    # print(f'config is {config}')
     with open(os.path.join('data/working', config), 'r') as f:
         configJson = json.load(f)
-    print(configJson)
+    # print(configJson)
     return configJson
 
 class Actions(Enum):
@@ -30,6 +31,7 @@ class Positions(Enum):
 class TECLCustomEnv(gym.Env):
     def __init__(self, configFile):
         self.config = readConfig(configFile)
+        print(f"read data between {self.config['startDate']} and {self.config['endDate']}")
         self.df = readToDataFrame(self.config['startDate'], self.config['endDate'])
         # assert len(frame_bound) == 2
 
@@ -50,8 +52,9 @@ class TECLCustomEnv(gym.Env):
         # self._start_tick = self.window_size
         # self._end_tick = len(self.prices) - 1
         
-        self.prices = self.df[self.df['symbol'] == 'TECL']['regularMarketPrice'].to_numpy()
-        print("init self.prices: ", self.prices)
+        # self.prices = self.df[self.df['symbol'] == 'TECL']['regularMarketPrice'].to_numpy()
+        self.prices = self.df[self.df['symbol'] == 'TECL']['close'].to_numpy()
+        print("init self.prices: ", self.prices, len(self.prices))
         
         self._done = None
         self._current_tick = None
@@ -96,6 +99,10 @@ class TECLCustomEnv(gym.Env):
         # 第二维度代表有多少个参考的股票代码， 比如参考5个股票，那就是5
         # 第三维度代表股票具体指标，比如 open/close/high/low/volume，那就是5个参数
         return getArray(self.df, self._current_tick)
+        # observation = getArray(self.df, self._current_tick)
+        # print(np.array(observation).shape)
+        # return observation
+
 
     def _calculate_reward(self, action):
         step_reward = 0
@@ -109,6 +116,7 @@ class TECLCustomEnv(gym.Env):
 
         if trade:
             current_price = self.prices[self._current_tick]
+            # print(f"TECL price {current_price} and current_tick {self._current_tick}")
             last_trade_price = self.prices[self._last_trade_tick]
             price_diff = current_price - last_trade_price
 
@@ -232,9 +240,10 @@ class TECLCustomEnv(gym.Env):
     #         return [Actions.Sell.value, Actions.Hold.value]
 
     def step(self, action):
-        # print("action: ", Actions(action).name)
+        print("action: ", Actions(action).name)
         self._done = False
         self._current_tick += 1
+        print(f"tick {self._current_tick}")
 
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
@@ -245,8 +254,10 @@ class TECLCustomEnv(gym.Env):
         if observation is None:
             print('observation is None, set self._done to True...')
             self._done = True
+        print(f"observation ${np.array(observation).shape}")
 
         step_reward = self._calculate_reward(action)
+        print(f"step_reward {step_reward}")
         self._total_reward += step_reward
 
         if trade:
@@ -257,6 +268,7 @@ class TECLCustomEnv(gym.Env):
 
         
         my_cash_balance, my_shares, my_total_value = self._calculate_total_value(action)
+        print(f"my_total_value {my_total_value}")
         # previous_total_value = self.previousTotalValue()
         self.my_total_value_history.append(my_total_value)
         # step_reward = my_total_value / previous_total_value
@@ -269,6 +281,7 @@ class TECLCustomEnv(gym.Env):
             position = self._position.value
         )
         self._update_history(info)
+        print(f"step return tick {self._current_tick}")
         return observation, step_reward, self._done, info
 
     def previousTotalValue(self):
