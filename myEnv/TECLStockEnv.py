@@ -8,7 +8,7 @@ from enum import Enum
 from gym import spaces
 from matplotlib import pyplot as plt
 # from myEnv.stockDataReader import readToDataFrame, getArray, countPerDay, targetSymbolIndex
-from myEnv.stockDataAlphaReader import readToDataFrame, getArray
+from myEnv.stockDataAlphaReader import readToDataFrame, getArray, countPerDay
 from util import debug
 
 def readConfig(config): 
@@ -21,6 +21,7 @@ def readConfig(config):
 class Actions(Enum):
     Sell = 0
     Buy = 1
+    # Hold = 2
 class Positions(Enum):
     Short = 0
     Long = 1
@@ -79,8 +80,8 @@ class TECLCustomEnv(gym.Env):
 
         self._done = False
         self._current_tick = 0
-        self._last_trade_tick = self._current_tick - 1 #TODO is it correct???
-        self._position = Positions.Short
+        self._last_trade_tick = self._current_tick - 1
+        self._position = Positions.Short # TODO try initial position is Long
         # self._position_history = (self.window_size * [None]) + [self._position]
         self._position_history = []
         self._total_reward = 0.
@@ -98,13 +99,18 @@ class TECLCustomEnv(gym.Env):
         # 第一维度代表多少天的数据，比如取两周 day 数据，就是10
         # 第二维度代表有多少个参考的股票代码， 比如参考5个股票，那就是5
         # 第三维度代表股票具体指标，比如 open/close/high/low/volume，那就是5个参数
-        return getArray(self.df, self._current_tick)
-        # observation = getArray(self.df, self._current_tick)
-        # print(np.array(observation).shape)
-        # return observation
-
+        observation = getArray(self.df, self._current_tick)
+        if observation is not None:
+            assert observation[0][98][0] == self.prices[self._current_tick], f"tick: {self._current_tick}, price: {self.prices[self._current_tick]}, observation: {observation[0][98][0]}" # TECL is @98
+        return observation
 
     def _calculate_reward(self, action):
+        return self._calculate_reward_1(action)
+
+    """
+    this is the algorithm from anytrading
+    """
+    def _calculate_reward_1(self, action):
         step_reward = 0
 
         trade = False
@@ -130,7 +136,6 @@ class TECLCustomEnv(gym.Env):
             # print("step_reward", step_reward)
         
         return step_reward
-
 
     def _calculate_total_value(self, action):
         current_price = self.prices[self._current_tick - 1]
@@ -233,31 +238,32 @@ class TECLCustomEnv(gym.Env):
     def close(self):
         plt.close()
 
-    # def legal_actions(self):
-    #     if self._position == Positions.Short: 
-    #         return [Actions.Buy.value, Actions.Hold.value]
-    #     if self._position == Positions.Long:
-    #         return [Actions.Sell.value, Actions.Hold.value]
+    def legal_actions(self):
+        # depend on countPerDay, max transaction per day shall be 2
+        # if self._position == Positions.Short: 
+        #     return [Actions.Buy.value, Actions.Hold.value]
+        # if self._position == Positions.Long:
+        #     return [Actions.Sell.value, Actions.Hold.value]
+        return [Actions.Sell.value, Actions.Buy.value]
 
     def step(self, action):
-        print("action: ", Actions(action).name)
+        # print("action: ", Actions(action).name)
         self._done = False
-        self._current_tick += 1
-        print(f"tick {self._current_tick}")
 
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
             (action == Actions.Sell.value and self._position == Positions.Long)):
             trade = True
 
+        # print(f"tick {self._current_tick}")
         observation = self._get_observation()
         if observation is None:
             print('observation is None, set self._done to True...')
             self._done = True
-        print(f"observation ${np.array(observation).shape}")
+        # print(f"observation ${np.array(observation).shape}")
 
         step_reward = self._calculate_reward(action)
-        print(f"step_reward {step_reward}")
+        # print(f"step_reward {step_reward}")
         self._total_reward += step_reward
 
         if trade:
@@ -268,7 +274,7 @@ class TECLCustomEnv(gym.Env):
 
         
         my_cash_balance, my_shares, my_total_value = self._calculate_total_value(action)
-        print(f"my_total_value {my_total_value}")
+        # print(f"my_total_value {my_total_value}")
         # previous_total_value = self.previousTotalValue()
         self.my_total_value_history.append(my_total_value)
         # step_reward = my_total_value / previous_total_value
@@ -281,7 +287,8 @@ class TECLCustomEnv(gym.Env):
             position = self._position.value
         )
         self._update_history(info)
-        print(f"step return tick {self._current_tick}")
+        # print(f"step return tick {self._current_tick}")
+        self._current_tick += 1
         return observation, step_reward, self._done, info
 
     def previousTotalValue(self):
@@ -291,19 +298,22 @@ class TECLCustomEnv(gym.Env):
             previous_total_value = self.my_init_cash_balance
         return previous_total_value
 
+def verifyObservation(env):
+    env.reset()
+    prices = env.prices
+    df = env.df
+    count = 0
+    while True:
+        observation, step_reward, done, info = env.step(Actions.Buy)
+        if observation is None:
+            break
+        assert observation[0][98][0] == prices[count], f"observation is not correct @{count}"
+        count += 1
+    print(f"observation is valid... iterate time {count}")
+    env.reset()
+
 if __name__ == "__main__":
-    # df = getData()
-    # print("data size", df.size)
-
-    # env = MyCustomEnv(df=df, window_size=12, frame_bound=(12,200))
-    # prices, signal_features = env._process_data()
-    # print("signal_features", signal_features)
-
-    # env.reset()
-
-    # observation = env._get_observation()
-    # print(observation.shape)
-    # print(type(observation))
-    # print(observation)
+    env = TECLCustomEnv(configFile='teclConfig.json') #, frame_bound=(10,200) 
+    env.reset()
 
     print("manual test done...")

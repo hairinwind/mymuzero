@@ -35,7 +35,6 @@ def getArray(df, tick, dropColumn=True):
         startIndex = i * symbolCount
         endIndex = (i+1) * symbolCount 
         if endIndex > len(subDataFrame):
-            print(endIndex, len(subDataFrame))
             return None
         data.append(subDataFrame[startIndex : endIndex].to_numpy().tolist())
     if len(data) == 0:
