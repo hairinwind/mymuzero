@@ -175,8 +175,8 @@ class Game(AbstractGame):
         Returns:
             An array of integers, subset of the action space.
         """
-        # return list(range(2))
-        return self.env.legal_actions()
+        return list(range(2))
+        # return self.env.legal_actions()
 
     def reset(self):
         """
