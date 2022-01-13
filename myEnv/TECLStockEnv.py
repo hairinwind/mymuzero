@@ -54,7 +54,8 @@ class TECLCustomEnv(gym.Env):
         # self._end_tick = len(self.prices) - 1
         
         # self.prices = self.df[self.df['symbol'] == 'TECL']['regularMarketPrice'].to_numpy()
-        self.prices = self.df[self.df['symbol'] == 'TECL']['close'].to_numpy()
+        prices = self.df[self.df['symbol'] == 'TECL']['close'].to_numpy()
+        self.prices = prices[countPerDay - 1:]
         print("init self.prices: ", self.prices, len(self.prices))
         
         self._done = None
@@ -84,7 +85,7 @@ class TECLCustomEnv(gym.Env):
         self._position = Positions.Short # TODO try initial position is Long
         # self._position_history = (self.window_size * [None]) + [self._position]
         self._position_history = []
-        self._total_reward = 0.
+        self._total_reward = self.prices[countPerDay]
         self._total_profit = 1.  # unit
         self._first_rendering = True
         self.history = {}
@@ -100,8 +101,8 @@ class TECLCustomEnv(gym.Env):
         # 第二维度代表有多少个参考的股票代码， 比如参考5个股票，那就是5
         # 第三维度代表股票具体指标，比如 open/close/high/low/volume，那就是5个参数
         observation = getArray(self.df, self._current_tick)
-        if observation is not None:
-            assert observation[0][98][0] == self.prices[self._current_tick], f"tick: {self._current_tick}, price: {self.prices[self._current_tick]}, observation: {observation[0][98][0]}" # TECL is @98
+        # if observation is not None:
+        #     assert observation[0][98][0] == self.prices[self._current_tick], f"tick: {self._current_tick}, price: {self.prices[self._current_tick]}, observation: {observation[0][98][0]}" # TECL is @98
         return observation
 
     def _calculate_reward(self, action):
@@ -206,9 +207,8 @@ class TECLCustomEnv(gym.Env):
             short_ticks = []
             long_ticks = []
             
-            print("self._position_history:", self._position_history)
+            # print("self._position_history:", self._position_history)
             # print("window_ticks:", window_ticks)
-            # print(self._position_history)
             for i, tick in enumerate(window_ticks):
                 if i == 0 :
                     previousPosition = Positions.Short
@@ -223,7 +223,8 @@ class TECLCustomEnv(gym.Env):
                     print("add long_ticks:", tick)
                 
             result = {}
-            result['prices'] = self.prices
+            result['prices'] = self.prices[countPerDay-1:] # the first observation contains quotes for one day
+            result['history'] = self.history
             result['total_value_history'] = self.my_total_value_history
             result['short_ticks'] = short_ticks
             result['long_ticks'] = long_ticks
@@ -247,8 +248,9 @@ class TECLCustomEnv(gym.Env):
         return [Actions.Sell.value, Actions.Buy.value]
 
     def step(self, action):
-        # print("action: ", Actions(action).name)
+        # print(f"action: {Actions(action).name}, tick {self._current_tick}")
         self._done = False
+        self._current_tick += 1
 
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
@@ -257,20 +259,22 @@ class TECLCustomEnv(gym.Env):
 
         # print(f"tick {self._current_tick}")
         observation = self._get_observation()
+        step_reward = 0
         if observation is None:
-            print('observation is None, set self._done to True...')
+            # print('observation is None, set self._done to True...')
             self._done = True
-        # print(f"observation ${np.array(observation).shape}")
-
-        step_reward = self._calculate_reward(action)
-        # print(f"step_reward {step_reward}")
-        self._total_reward += step_reward
+        else:
+            # print(f"price in observateion: {observation[countPerDay-1][98][0]}")
+            # print(f"price {self.prices[self._current_tick]}")
+            assert observation[countPerDay-1][98][0] == self.prices[self._current_tick]
+            step_reward = self._calculate_reward(action)
+            # print(f"step_reward {step_reward}")
+            self._total_reward += step_reward
 
         if trade:
             self._position = self._position.opposite()
             self._last_trade_tick = self._current_tick
-            # print("_position:", self._position)
-            # print("self._last_trade_tick: ", self._last_trade_tick)
+            # print(f"reward {step_reward}")
 
         
         my_cash_balance, my_shares, my_total_value = self._calculate_total_value(action)
@@ -287,8 +291,6 @@ class TECLCustomEnv(gym.Env):
             position = self._position.value
         )
         self._update_history(info)
-        # print(f"step return tick {self._current_tick}")
-        self._current_tick += 1
         return observation, step_reward, self._done, info
 
     def previousTotalValue(self):
