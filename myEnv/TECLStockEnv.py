@@ -223,7 +223,7 @@ class TECLCustomEnv(gym.Env):
                     print("add long_ticks:", tick)
                 
             result = {}
-            result['prices'] = self.prices[countPerDay-1:] # the first observation contains quotes for one day
+            result['prices'] = self.prices
             result['history'] = self.history
             result['total_value_history'] = self.my_total_value_history
             result['short_ticks'] = short_ticks
@@ -266,7 +266,7 @@ class TECLCustomEnv(gym.Env):
         else:
             # print(f"price in observateion: {observation[countPerDay-1][98][0]}")
             # print(f"price {self.prices[self._current_tick]}")
-            assert observation[countPerDay-1][98][0] == self.prices[self._current_tick]
+            assert observation[countPerDay-1][0][0] == self.prices[self._current_tick] #98 if full symbols
             step_reward = self._calculate_reward(action)
             # print(f"step_reward {step_reward}")
             self._total_reward += step_reward

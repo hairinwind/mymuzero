@@ -6,7 +6,8 @@ import os
 import pandas as pd
 
 countPerDay = 9 # as it is resampled every 15 minutes, the countPerDay was changed from 85 to 29
-symbolCount = 120
+symbols = ['TECL']
+symbolCount = len(symbols) if len(symbols) > 0 else 120
 signalCount = 11
 
 """
@@ -18,6 +19,8 @@ def readToDataFrame(startDate, endDate):
         # print(f'read file for {day}')
         df = pd.read_csv(file)
         df = df[(df['date']>=startDate) & (df['date']<=endDate)]
+        if len(symbols) > 0:
+            df = df.query('symbol in @symbols')
         df.sort_values(by=['time','symbol'], inplace=True)
         return df
 
